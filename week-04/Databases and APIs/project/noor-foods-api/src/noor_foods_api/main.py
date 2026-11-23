@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Annotated, Any
 
 from fastapi import FastAPI, Query, Response, status
@@ -28,6 +29,7 @@ def list_products(
     category_id: int | None = None,
     search: str | None = None,
     in_stock: bool | None = None,
+    max_price: Decimal | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Any:
@@ -36,6 +38,7 @@ def list_products(
         category_id=category_id,
         search=search,
         in_stock=in_stock,
+        max_price=max_price,
         limit=limit,
         offset=offset,
     )

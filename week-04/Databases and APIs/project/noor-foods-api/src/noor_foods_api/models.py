@@ -161,6 +161,4 @@ class RiderShift(SQLModel, table=True):
     shift_date: date
     starts_at: time
     ends_at: time
-    ends_at: time
-    notes: str | None = Field(default=None, sa_type=Text)
     notes: str | None = Field(default=None, max_length=200)

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlmodel import Session, col, select
 
 from .models import Category, Product, ProductCreate, ProductUpdate
@@ -14,6 +16,7 @@ def list_products(
     category_id: int | None = None,
     search: str | None = None,
     in_stock: bool | None = None,
+    max_price: Decimal | None = None,
     limit: int = 20,
     offset: int = 0,
 ) -> list[Product]:
@@ -21,16 +24,23 @@ def list_products(
 
     if category_id is not None:
         statement = statement.where(Product.category_id == category_id)
+
     if search is not None:
         statement = statement.where(col(Product.name).ilike(f"%{search}%"))
+
     if in_stock is True:
         statement = statement.where(Product.stock_quantity > 0)
+
     if in_stock is False:
         statement = statement.where(Product.stock_quantity == 0)
+
+    if max_price is not None:
+        statement = statement.where(Product.unit_price <= max_price)
 
     statement = (
         statement.order_by(col(Product.product_id)).offset(offset).limit(limit)
     )
+
     return list(session.exec(statement).all())
 
 
