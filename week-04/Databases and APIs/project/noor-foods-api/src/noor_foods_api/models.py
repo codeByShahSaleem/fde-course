@@ -1,7 +1,8 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
+from pydantic import StringConstraints
 from sqlalchemy import DateTime, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -35,19 +36,50 @@ class Supplier(SQLModel, table=True):
     phone: str = Field(sa_type=Text)
 
 
-class Product(SQLModel, table=True):
+ProductName = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=2),
+]
+
+
+class ProductBase(SQLModel):
+    name: ProductName = Field(sa_type=Text)
+    category_id: int = Field(foreign_key="categories.category_id")
+    supplier_id: int = Field(foreign_key="suppliers.supplier_id")
+    unit_price: Decimal = Field(max_digits=10, decimal_places=2, gt=0)
+    stock_quantity: int = Field(default=0, ge=0)
+    is_discontinued: bool = False
+    attributes: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)
+
+
+class Product(ProductBase, table=True):
     __tablename__ = "products"
 
     product_id: int | None = Field(default=None, primary_key=True)
     sku: str = Field(sa_type=Text, unique=True)
-    name: str = Field(sa_type=Text)
-    category_id: int = Field(foreign_key="categories.category_id")
-    supplier_id: int = Field(foreign_key="suppliers.supplier_id")
-    unit_price: Decimal = Field(max_digits=10, decimal_places=2)
-    stock_quantity: int = 0
-    is_discontinued: bool = False
-    attributes: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)
     added_on: date = Field(default_factory=date.today)
+
+
+class ProductCreate(ProductBase):
+    sku: str = Field(min_length=3)
+
+
+class ProductUpdate(SQLModel):
+    name: ProductName | None = None
+    category_id: int | None = None
+    supplier_id: int | None = None
+    unit_price: Decimal | None = Field(
+        default=None, max_digits=10, decimal_places=2, gt=0
+    )
+    stock_quantity: int | None = Field(default=None, ge=0)
+    is_discontinued: bool | None = None
+    attributes: dict[str, Any] | None = None
+
+
+class ProductRead(ProductBase):
+    product_id: int
+    sku: str
+    added_on: date
 
 
 class Customer(SQLModel, table=True):
@@ -119,3 +151,16 @@ class OrderItem(SQLModel, table=True):
     product_id: int = Field(foreign_key="products.product_id", primary_key=True)
     quantity: int
     unit_price: Decimal = Field(max_digits=10, decimal_places=2)
+
+
+class RiderShift(SQLModel, table=True):
+    __tablename__ = "rider_shifts"
+
+    shift_id: int | None = Field(default=None, primary_key=True)
+    rider_id: int = Field(foreign_key="riders.rider_id")
+    shift_date: date
+    starts_at: time
+    ends_at: time
+    ends_at: time
+    notes: str | None = Field(default=None, sa_type=Text)
+    notes: str | None = Field(default=None, max_length=200)
